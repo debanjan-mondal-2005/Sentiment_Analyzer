@@ -1,0 +1,8 @@
+{
+  "version": "1",
+  "description": "Original baseline model",
+  "vocab_size": 500,
+  "embedding_dim": 64,
+  "epochs": 4,
+  "architecture": "Bi-LSTM single layer"
+}

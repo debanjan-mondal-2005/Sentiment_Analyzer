@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+sentiment_slang/
+venv/
+env/
+ENV/
+
+# Data files (not needed in production)
+data/
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Training scripts (not needed in production)
+train_cpu_model.py
+
+# Batch files
+*.bat
+
+# Cache
+.cache/
