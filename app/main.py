@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.preprocessing import clean_text
@@ -40,8 +40,8 @@ class TextInput(BaseModel):
 
 @app.get("/")
 def home():
-    """Serve the main HTML page"""
-    return FileResponse(os.path.join(static_path, "index.html"))
+    """Redirect to static index page"""
+    return RedirectResponse(url="/static/index.html")
 
 @app.get("/models")
 def list_models():

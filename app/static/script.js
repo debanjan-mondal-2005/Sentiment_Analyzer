@@ -22,7 +22,7 @@ const modelUsed = document.getElementById('modelUsed');
 // IMPORTANT: Update this URL to your live Render backend URL after deploying!
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
     ? 'http://localhost:8000' 
-    : 'https://YOUR_RENDER_BACKEND_URL.onrender.com';
+    : 'https://sentiment-analyzer-jvp8.onrender.com';
 
 // Available models
 let availableModels = {};
