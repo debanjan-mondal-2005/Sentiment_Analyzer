@@ -1,3 +1,5 @@
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import tensorflow as tf
 import pandas as pd
 import pickle
@@ -5,7 +7,9 @@ import os
 import shutil
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, Dropout, Dense, GRU
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.text import Tokenizer
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import LabelEncoder
 
@@ -94,7 +98,7 @@ history = model.fit(
 
 save_path = os.path.join("models", "version2", "sentiment_model", "1")
 os.makedirs(os.path.dirname(save_path), exist_ok=True)
-model.export(save_path)
+model.save(save_path)
 print(f"\nVersion 2 Model saved to {save_path}")
 
 metadata = {

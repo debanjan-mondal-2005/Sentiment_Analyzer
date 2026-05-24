@@ -1,8 +1,11 @@
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import tensorflow as tf
 import numpy as np
 import pickle
 import os
 import sys
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.utils import pad_sequences
 import json
 

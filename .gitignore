@@ -35,10 +35,10 @@ ENV/
 Thumbs.db
 desktop.ini
 
-# Model files (too large for git)
-*.h5
-*.pb
-*.keras
+# Model files (Commented out because your models are very small (~155 KB) and MUST be pushed to GitHub for Render to use them!)
+# *.h5
+# *.pb
+# *.keras
 
 # Logs
 *.log

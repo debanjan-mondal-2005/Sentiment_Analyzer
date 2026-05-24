@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from app.preprocessing import clean_text
 from typing import Optional
 import os
+
+# Set this BEFORE importing any tensorflow modules to use legacy Keras (Keras 2) with TF 2.16+
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 
 # Try to import multi-model utils, fallback to single model
 try:
@@ -15,6 +19,16 @@ except ImportError:
     MULTI_MODEL = False
 
 app = FastAPI(title="Sentiment Slang Analyzer", version="2.0")
+
+# Enable CORS for all origins so Vercel can communicate with Render backend
+# Note: You can change ["*"] to your specific Vercel URL in production for better security
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Mount static files
 static_path = os.path.join(os.path.dirname(__file__), "static")

@@ -1,10 +1,14 @@
+import os
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
 import tensorflow as tf
 import pandas as pd
 import pickle
 import os
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, Dropout, Dense
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.text import Tokenizer
+# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import LabelEncoder
 
@@ -74,7 +78,7 @@ history = model.fit(
     verbose=1
 )
 save_path = os.path.join("models", "sentiment_model_cpu", "1")
-model.export(save_path) 
+model.save(save_path) 
 print(f"Model saved to {save_path}")
 
 imported = tf.saved_model.load(save_path)

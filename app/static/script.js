@@ -18,6 +18,12 @@ const cleanedText = document.getElementById('cleanedText');
 const errorMessage = document.getElementById('errorMessage');
 const modelUsed = document.getElementById('modelUsed');
 
+// API Configuration
+// IMPORTANT: Update this URL to your live Render backend URL after deploying!
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:8000' 
+    : 'https://YOUR_RENDER_BACKEND_URL.onrender.com';
+
 // Available models
 let availableModels = {};
 
@@ -48,7 +54,7 @@ const sentimentConfig = {
 // Load available models on page load
 async function loadAvailableModels() {
     try {
-        const response = await fetch('/models');
+        const response = await fetch(`${API_BASE_URL}/models`);
         availableModels = await response.json();
         
         // Update model select options
@@ -221,7 +227,7 @@ async function analyzeSentiment(text) {
         const modelVersion = modelSelect.value;
         
         // Make API request
-        const response = await fetch('/predict', {
+        const response = await fetch(`${API_BASE_URL}/predict`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
