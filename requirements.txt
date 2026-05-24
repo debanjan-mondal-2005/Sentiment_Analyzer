@@ -1,10 +1,9 @@
 fastapi
 uvicorn
-pydantic
-tensorflow-cpu==2.20.0
-tf-keras
+tensorflow-cpu
 numpy
 pandas
 scikit-learn
+pydantic
+python-multipart
 emoji
-h5py

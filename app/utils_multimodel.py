@@ -1,16 +1,19 @@
 import os
-os.environ["TF_USE_LEGACY_KERAS"] = "1"
-import tensorflow as tf
-import numpy as np
-import pickle
-import os
 import sys
-# pyrefly: ignore [missing-import]
-from tensorflow.keras.utils import pad_sequences
+import pickle
 import json
+import numpy as np
 
+# Set TensorFlow configuration BEFORE importing it to optimize memory
+os.environ["TF_USE_LEGACY_KERAS"] = "1"
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+import tensorflow as tf
+
+# Memory Optimization: Disable GPU & limit thread usage
 tf.config.set_visible_devices([], 'GPU')
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+tf.config.threading.set_intra_op_parallelism_threads(1)
+tf.config.threading.set_inter_op_parallelism_threads(1)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,31 +35,54 @@ AVAILABLE_MODELS = {
     }
 }
 
-# ==================== LOAD ALL MODELS ====================
-models = {}
-tokenizers = {}
-label_encoders = {}
-input_keys = {}
-metadata = {}
+# Caches for lazy loaded components
+_models = {}
+_tokenizers = {}
+_label_encoders = {}
+_input_keys = {}
+_metadata = {}
 
-print("="*60)
-print("LOADING MODEL VERSIONS")
-print("="*60)
+def pad_sequences(sequences, maxlen, padding='post', truncating='post', value=0):
+    """Custom pad_sequences implementation to avoid importing heavy Keras modules"""
+    padded = []
+    for seq in sequences:
+        if len(seq) > maxlen:
+            if truncating == 'pre':
+                seq = seq[-maxlen:]
+            else:
+                seq = seq[:maxlen]
+        else:
+            difference = maxlen - len(seq)
+            if padding == 'pre':
+                seq = [value] * difference + seq
+            else:
+                seq = seq + [value] * difference
+        padded.append(seq)
+    return np.array(padded)
 
-for version, config in AVAILABLE_MODELS.items():
-    print(f"\nLoading {version}...")
+def load_model_version(version):
+    """Lazily load a specific model version when requested"""
+    global _models, _tokenizers, _label_encoders, _input_keys, _metadata
     
-    # Check if model exists
+    if version in _models:
+        return True
+        
+    if version not in AVAILABLE_MODELS:
+        print(f"  ❌ Requested model version '{version}' is not defined.")
+        return False
+        
+    config = AVAILABLE_MODELS[version]
+    
     if not os.path.exists(config["model_path"]):
         print(f"  ⚠ {version} model not found at {config['model_path']}")
-        print(f"  ℹ Skipping {version}")
-        continue
-    
+        return False
+        
     try:
-        # Load model
+        print(f"⏳ Loading {version} lazily...", flush=True)
+        # Load model signature
         imported = tf.saved_model.load(config["model_path"])
         infer = imported.signatures["serving_default"]
-        models[version] = infer
+        _models[version] = infer
         
         # Detect input key
         if hasattr(infer, 'structured_input_signature'):
@@ -64,64 +90,58 @@ for version, config in AVAILABLE_MODELS.items():
             if sig and len(sig) > 1 and isinstance(sig[1], dict):
                 input_keys_list = list(sig[1].keys())
                 if input_keys_list:
-                    input_keys[version] = input_keys_list[0]
-        
+                    _input_keys[version] = input_keys_list[0]
+                    
+        if version not in _input_keys:
+            # Fallback
+            _input_keys[version] = "input_1"
+            
         # Load tokenizer
         with open(config["tokenizer_path"], 'rb') as f:
-            tokenizers[version] = pickle.load(f)
-        
+            _tokenizers[version] = pickle.load(f)
+            
         # Load label encoder
         with open(config["encoder_path"], 'rb') as f:
-            label_encoders[version] = pickle.load(f)
-        
+            _label_encoders[version] = pickle.load(f)
+            
         # Load metadata
         if os.path.exists(config["metadata_path"]):
             with open(config["metadata_path"], 'r') as f:
-                metadata[version] = json.load(f)
+                _metadata[version] = json.load(f)
         else:
-            metadata[version] = {"version": version, "description": "No metadata available"}
-        
-        print(f"  ✅ {version} loaded successfully")
-        print(f"     Model: {os.path.basename(config['model_path'])}")
-        print(f"     Input key: {input_keys.get(version, 'N/A')}")
-        if version in metadata:
-            print(f"     Description: {metadata[version].get('description', 'N/A')}")
-        
+            _metadata[version] = {"version": version, "description": f"Dynamic metadata for {version}"}
+            
+        print(f"  ✅ {version} loaded successfully!", flush=True)
+        return True
     except Exception as e:
-        print(f"  ❌ Failed to load {version}: {e}")
+        print(f"  ❌ Failed to load {version}: {e}", flush=True)
+        return False
 
-print("\n" + "="*60)
-print(f"LOADED MODELS: {list(models.keys())}")
-print("="*60)
-
-if not models:
-    print("ERROR: No models loaded! Please run setup_model_versions.py and train_model_v2.py")
-    sys.exit(1)
-
-# ==================== PREDICTION FUNCTION ====================
 def get_prediction(text, model_version="version1"):
-    """
-    Get sentiment prediction from specified model version
-    
-    Args:
-        text: Input text to analyze
-        model_version: Which model to use ("version1" or "version2")
-    
-    Returns:
-        dict: Contains sentiment, confidence, and model info
-    """
     try:
-        # Validate model version
-        if model_version not in models:
-            available = list(models.keys())
-            print(f"Warning: {model_version} not available. Using {available[0]}")
-            model_version = available[0]
-        
+        # Lazily load the target model version
+        success = load_model_version(model_version)
+        if not success:
+            # Fallback to any loaded model
+            if _models:
+                fallback_version = list(_models.keys())[0]
+                print(f"Warning: {model_version} failed to load. Falling back to {fallback_version}")
+                model_version = fallback_version
+            else:
+                # Try to load the other configured one as fallback
+                other_versions = [v for v in AVAILABLE_MODELS.keys() if v != model_version]
+                for other in other_versions:
+                    if load_model_version(other):
+                        model_version = other
+                        break
+                else:
+                    raise RuntimeError("No models could be loaded.")
+                    
         config = AVAILABLE_MODELS[model_version]
-        model = models[model_version]
-        tokenizer = tokenizers[model_version]
-        label_encoder = label_encoders[model_version]
-        input_key = input_keys[model_version]
+        model = _models[model_version]
+        tokenizer = _tokenizers[model_version]
+        label_encoder = _label_encoders[model_version]
+        input_key = _input_keys[model_version]
         max_len = config["max_len"]
         
         # Preprocess
@@ -143,19 +163,30 @@ def get_prediction(text, model_version="version1"):
             "sentiment": predicted_label,
             "confidence": confidence,
             "model_version": model_version,
-            "model_info": metadata.get(model_version, {})
+            "model_info": _metadata.get(model_version, {})
         }
-        
     except Exception as e:
         print(f"Error in prediction: {e}")
         raise
 
 def get_available_models():
-    """Get list of available model versions with metadata"""
-    return {
-        version: {
-            "available": True,
-            "metadata": metadata.get(version, {})
-        }
-        for version in models.keys()
-    }
+    # Attempt to load metadata for all configured models
+    available = {}
+    for version in AVAILABLE_MODELS.keys():
+        # Check if the directories exist physically
+        if os.path.exists(AVAILABLE_MODELS[version]["model_path"]):
+            # Load metadata (lightweight file read, no model loading)
+            metadata_path = AVAILABLE_MODELS[version]["metadata_path"]
+            if os.path.exists(metadata_path):
+                try:
+                    with open(metadata_path, 'r') as f:
+                        meta = json.load(f)
+                except:
+                    meta = {"version": version, "description": f"Model version {version}"}
+            else:
+                meta = {"version": version, "description": f"Model version {version}"}
+            available[version] = {
+                "available": True,
+                "metadata": meta
+            }
+    return available
