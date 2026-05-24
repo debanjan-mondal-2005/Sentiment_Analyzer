@@ -7,9 +7,7 @@ import os
 import shutil
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Embedding, Bidirectional, LSTM, Dropout, Dense, GRU
-# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.text import Tokenizer
-# pyrefly: ignore [missing-import]
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import LabelEncoder
 
